@@ -10,7 +10,7 @@ export const socket = io();
 export interface Item {
   id: number;
   name: string;
-  unit_type: 'liters' | 'pieces';
+  unit_type: 'litry' | 'kusy';
   current_stock: number;
   selling_price: number;
 }
@@ -25,13 +25,47 @@ export interface InventoryEntry {
     last_updated_at: string; // ISO formát
     last_updated_by_client_id: string;
     item_name: string;
-    unit_type: 'liters' | 'pieces';
+    unit_type: 'litry' | 'kusy';
     selling_price: number;
     difference_quantity: number;
     difference_value: number;
 }
 
-//Stav zásob atkuální
+// ------------------
+//     API FUNKCE
+// ------------------
+
+export const addItem = async (
+    name: string,
+    unitType: 'litry' | 'kusy',
+    sellingPrice: number
+): Promise<Item> => {
+    const response = await api.post('/items', {
+        name: name,
+        unit_type: unitType,
+        selling_price: sellingPrice
+    });
+    return response.data;
+}
+
+export const updateItem = async (
+    id: number,
+    name: string,
+    unitType: 'litry' | 'kusy',
+    sellingPrice: number
+): Promise<Item> => {
+    const response = await api.put(`/items/${id}`, {
+        name: name,
+        unit_type: unitType,
+        selling_price: sellingPrice
+    });
+    return response.data;
+};
+
+export const deleteItem = async (id: number): Promise<void> => {
+    await api.delete(`/items/${id}`);
+};
+
 export const fetchCurrentStock = async (): Promise<Item[]> => {
     const response = await api.get('/stock');
     return response.data.stock; 

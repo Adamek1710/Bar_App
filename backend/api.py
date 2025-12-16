@@ -6,6 +6,51 @@ from sqlalchemy.exc import IntegrityError
 
 api_bp = Blueprint('api', __name__)
 
+@api_bp.route('/items/<int:item_id>', methods=['DELETE'])
+def delete_item(item_id):
+    item = Item.query.get(item_id)
+    if not item:
+        return jsonify({'message': f'Položka s ID {item_id} nebyla nalezena.'}), 404
+    
+    try:
+        db.session.delete(item)
+        db.session.commit()
+        return jsonify({'message': f'Položka {item.name} byla úspěšně smazána.'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Chyba při mazání položky: {str(e)}'}), 500
+
+@api_bp.route('/items/<int:item_id>', methods=['PUT'])
+def update_item(item_id):
+    item = Item.query.get(item_id)
+    if not item:
+        return jsonify({'message': f'Položka s ID {item_id} nebyla nalezena.'}), 404
+
+    data = request.json
+    name = data.get('name')
+    unit_type = data.get('unit_type')
+    selling_price = data.get('selling_price')
+
+    try:
+        if name:
+            item.name = name
+        if unit_type:
+            item.unit_type = unit_type
+        if selling_price is not None:
+            item.selling_price = float(selling_price)
+
+        db.session.commit()
+        return jsonify(item.to_dict()), 200
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({'message': f'Položka se jménem {name} již existuje.'}), 409
+    except ValueError:
+        db.session.rollback()
+        return jsonify({'message': 'Chybný formát prodejní ceny.'}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Došlo k chybě DB při aktualizaci: {str(e)}'}), 500
+
 @api_bp.route('/items', methods=['POST'])
 def add_item():
     data = request.json
@@ -96,7 +141,6 @@ def start_inventory():
         'session': new_session.to_dict(), 
         'entries': entries_list
     }), 201
-
 
 @api_bp.route('/inventory/finish/<int:session_id>', methods=['POST'])
 def finish_inventory(session_id):
