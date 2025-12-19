@@ -1,10 +1,42 @@
 from flask import Blueprint, jsonify, request
 from .__init__ import db, socketio
-from .models import Item, InventorySession, InventoryEntry
+from .models import Item, InventorySession, InventoryEntry, PublicMenuItem
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 api_bp = Blueprint('api', __name__)
+
+# Do api.py
+@api_bp.route('/public-menu', methods=['GET'])
+def get_menu():
+    items = PublicMenuItem.query.all()
+    return jsonify([i.to_dict() for i in items])
+
+@api_bp.route('/public-menu', methods=['POST'])
+def add_menu_item():
+    data = request.json
+    new_item = PublicMenuItem(
+        category=data['category'],
+        name=data['name'],
+        volume=data.get('volume', ''),
+        price=data['price']
+    )
+    db.session.add(new_item)
+    db.session.commit()
+    return jsonify(new_item.to_dict()), 201
+
+@api_bp.route('/public-menu/<int:item_id>', methods=['DELETE'])
+def delete_menu_item(item_id):
+    item = PublicMenuItem.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    return '', 204
+
+##############################
+#
+#    ITEM HANDLING ROUTES      
+#
+##############################
 
 @api_bp.route('/items/<int:item_id>', methods=['DELETE'])
 def delete_item(item_id):

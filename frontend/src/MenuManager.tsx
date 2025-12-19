@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-
+import { fetchPublicMenu, addPublicMenuItem, deletePublicMenuItem } from './api';
 // Typ pro položku v menu
 interface MenuItem {
-  id: string;
+  id: number;
   category: string;
   name: string;
   volume: string;
@@ -14,24 +14,19 @@ export const MenuManager = ({ adminMode = false }) => {
   const [newItem, setNewItem] = useState({ category: '', name: '', volume: '', price: 0 });
 
   useEffect(() => {
-    const savedMenu = localStorage.getItem('bar_public_menu');
-    if (savedMenu) setMenu(JSON.parse(savedMenu));
+    fetchPublicMenu().then(setMenu);
   }, []);
 
-  const saveMenu = (updatedMenu: MenuItem[]) => {
-    setMenu(updatedMenu);
-    localStorage.setItem('bar_public_menu', JSON.stringify(updatedMenu));
-  };
-
-  const addItem = () => {
+  const addItem = async () => {
     if (!newItem.name || !newItem.category) return;
-    const itemWithId = { ...newItem, id: Date.now().toString() };
-    saveMenu([...menu, itemWithId]);
+    const savedItem = await addPublicMenuItem(newItem);
+    setMenu([...menu, savedItem]);
     setNewItem({ category: newItem.category, name: '', volume: '', price: 0 });
   };
 
-  const removeItem = (id: string) => {
-    saveMenu(menu.filter(item => item.id !== id));
+  const removeItem = async (id: number) => {
+    await deletePublicMenuItem(id);
+    setMenu(menu.filter(item => item.id !== id));
   };
 
   const categories = Array.from(new Set(menu.map(i => i.category)));

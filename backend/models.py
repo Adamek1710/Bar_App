@@ -1,8 +1,23 @@
-# backend/models.py
-
 from datetime import datetime, timezone
 from sqlalchemy import UniqueConstraint
 from .__init__ import db
+
+#Menu
+class PublicMenuItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(50), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    volume = db.Column(db.String(20))
+    price = db.Column(db.Float, nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'category': self.category,
+            'name': self.name,
+            'volume': self.volume,
+            'price': self.price
+        }
 
 #Položka na skladě
 class Item(db.Model):

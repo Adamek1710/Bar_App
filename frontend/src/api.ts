@@ -38,6 +38,25 @@ export const bulkImportItems = async (items: any[]) => {
 };
 
 // ------------------
+//    MENU FUNKCE
+// ------------------
+
+// Do api.ts
+export const fetchPublicMenu = async () => {
+    const response = await axios.get('/api/public-menu');
+    return response.data;
+};
+
+export const addPublicMenuItem = async (item: any) => {
+    const response = await axios.post('/api/public-menu', item);
+    return response.data;
+};
+
+export const deletePublicMenuItem = async (id: number) => {
+    await axios.delete(`/api/public-menu/${id}`);
+};
+
+// ------------------
 //     API FUNKCE
 // ------------------
 
