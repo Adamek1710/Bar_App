@@ -16,7 +16,7 @@ export default defineConfig({
         secure: false,
       },
       '/socket.io': {
-        target: 'http://10.0.1.37:5173',
+        target: 'http://127.0.0.1:5000',
         ws: true,
         changeOrigin: true,
         secure: false,

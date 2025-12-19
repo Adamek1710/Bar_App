@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Item } from '../api';
 import { CSVImporter } from './CSVImport';
+import { StockCard } from './StockCard';
 
 interface Props {
   items: Item[];
@@ -9,25 +10,17 @@ interface Props {
   onDeleteItem: (item: Item) => void;
   onUpdateItem: (id: number, name: string, unit: 'litry' | 'kusy', price: number, stock: number) => Promise<void>;
   onRefresh: () => void;
+  onBulkImport: (data: any[]) => void;
 }
 
 export const StockMode: React.FC<Props> = ({ 
-  items, 
-  onStartInventory, 
-  onAddItem, 
-  onDeleteItem, 
-  onUpdateItem,
-  onRefresh 
+  items, onStartInventory, onAddItem, onDeleteItem, onUpdateItem, onRefresh, onBulkImport
 }) => {
-  // Přepínač mezi ručním přidáním a importem
   const [activeTab, setActiveTab] = useState<'manual' | 'import'>('manual');
-
-  // Stavy pro novou položku
   const [name, setName] = useState('');
   const [unit, setUnit] = useState<'litry' | 'kusy'>('litry');
   const [price, setPrice] = useState(0);
 
-  // Stavy pro editaci existující položky
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
   const [editUnit, setEditUnit] = useState<'litry' | 'kusy'>('litry');
@@ -43,11 +36,8 @@ export const StockMode: React.FC<Props> = ({
   };
 
   const handleSaveEdit = async (id: number) => {
-  const finalStock = editUnit === 'kusy' ? Math.round(editStock) : editStock;
-  const finalPrice = Math.round(editPrice);
-
-  await onUpdateItem(id, editName, editUnit, finalPrice, finalStock);
-  setEditingId(null);
+    await onUpdateItem(id, editName, editUnit, editPrice, editStock);
+    setEditingId(null);
   };
 
   return (
@@ -75,146 +65,138 @@ export const StockMode: React.FC<Props> = ({
           </button>
         </div>
 
-        <div className="min-h-[120px]">
-          {activeTab === 'manual' ? (
-            <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl animate-in slide-in-from-left-4 duration-300">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+       <div className="min-h-[120px]">
+        {activeTab === 'manual' ? (
+          <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl animate-in slide-in-from-left-4 duration-300">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+              
+              <div className="md:col-span-5 flex flex-col gap-1.5">
+                <label className="text-[9px] font-black text-slate-500 uppercase ml-2 md:hidden">Název produktu</label>
                 <input 
-                  className="md:col-span-5 bg-slate-950 border-2 border-slate-800 p-4 rounded-2xl focus:border-blue-500 outline-none transition-all" 
-                  placeholder="Název produktu..." 
+                  className="w-full bg-slate-950 border-2 border-slate-800 p-4 rounded-2xl focus:border-blue-500 outline-none transition-all text-white placeholder:text-slate-700" 
+                  placeholder="Např. Rumíček..." 
                   value={name} 
                   onChange={e => setName(e.target.value)} 
                 />
-                <select 
-                  className="md:col-span-3 bg-slate-950 border-2 border-slate-800 p-4 rounded-2xl focus:border-blue-500 outline-none" 
-                  value={unit} 
-                  onChange={e => setUnit(e.target.value as any)}
-                >
-                  <option value="litry">Litry</option>
-                  <option value="kusy">Kusy</option>
-                </select>
-                <div className="md:col-span-2 relative">
-                  <input 
-                    className="w-full bg-slate-950 border-2 border-slate-800 p-4 rounded-2xl focus:border-emerald-500 outline-none text-right font-bold text-emerald-500" 
-                    type="number" 
-                    value={price || ''} 
-                    onChange={e => setPrice(parseFloat(e.target.value) || 0)} 
-                  />
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-slate-600 uppercase text-white/50">Kč</span>
+              </div>
+
+              <div className="md:col-span-5 grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[9px] font-black text-slate-500 uppercase ml-2 md:hidden">Jednotka</label>
+                  <select 
+                    className="w-full bg-slate-950 border-2 border-slate-800 p-4 rounded-2xl focus:border-blue-500 outline-none text-white appearance-none" 
+                    value={unit} 
+                    onChange={e => setUnit(e.target.value as any)}
+                  >
+                    <option value="litry">Litry (L)</option>
+                    <option value="kusy">Kusy (KS)</option>
+                  </select>
                 </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[9px] font-black text-slate-500 uppercase ml-2 md:hidden">Prodejní cena</label>
+                  <div className="relative">
+                    <input 
+                      className="w-full bg-slate-950 border-2 border-slate-800 p-4 rounded-2xl focus:border-emerald-500 outline-none text-right font-bold text-emerald-500" 
+                      type="number"
+                      inputMode="decimal" 
+                      value={price || ''} 
+                      onChange={e => setPrice(parseFloat(e.target.value) || 0)} 
+                    />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-white/30 uppercase">Kč</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 flex items-end">
                 <button 
                   onClick={async () => { await onAddItem(name, unit, price); setName(''); setPrice(0); }} 
-                  className="md:col-span-2 bg-white text-black hover:bg-blue-600 hover:text-white rounded-2xl font-black uppercase text-xs transition-all"
+                  className="w-full h-[60px] md:h-full bg-white text-black hover:bg-blue-600 hover:text-white rounded-2xl font-black uppercase text-xs transition-all shadow-lg active:scale-95"
                 >
                   Přidat
                 </button>
               </div>
+
             </div>
-          ) : (
-            <div className="animate-in slide-in-from-right-4 duration-300">
-              <CSVImporter onImport={async (data) => {
-                onRefresh();
-              }} />
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="animate-in slide-in-from-right-4 duration-300">
+            <CSVImporter onImport={async (data) => {
+              await onBulkImport(data);
+              onRefresh();
+            }} />
+          </div>
+        )}
+      </div>
       </div>
 
-      <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl overflow-x-auto">
-        <table className="w-full text-left">
-          <thead className="bg-slate-800/50 text-[9px] uppercase font-black text-slate-500 tracking-[0.15em]">
-            <tr>
-              <th className="p-6">Produkt</th>
-              <th className="p-6 text-center">Aktuální stav</th>
-              <th className="p-6 text-center">Prodejní cena</th>
-              <th className="p-6 text-right">Akce</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800/50 text-slate-200">
-            {items.map(item => (
-              <tr key={item.id} className="hover:bg-blue-500/[0.03] transition-colors group">
-                {editingId === item.id ? (
-                  /* EDITAČNÍ ŘÁDEK */
-                  <>
-                    <td className="p-4">
-                      <input 
-                        className="w-full bg-slate-950 border-2 border-blue-500/30 p-3 rounded-xl font-bold focus:border-blue-500 outline-none" 
-                        value={editName} 
-                        onChange={e => setEditName(e.target.value)} 
-                      />
-                    </td>
-                    <td className="p-4 text-center">
-                      <div className="flex flex-col items-center">
-                        <input 
-                          className="w-24 bg-slate-950 border-2 border-blue-500/30 p-3 rounded-xl text-blue-400 font-bold text-center text-xl outline-none focus:border-blue-400" 
-                          type="number" 
-                          step={editUnit === 'kusy' ? '1' : '0.01'} 
-                          value={editStock} 
-                          onChange={e => setEditStock(parseFloat(e.target.value) || 0)} 
-                        />
-                        <span className="text-[8px] text-slate-500 uppercase mt-2 font-black tracking-widest">{editUnit === 'kusy' ? 'Celé kusy' : 'Desetiny (L)'}</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2 justify-center">
-                        <input 
-                          className="w-24 bg-slate-950 border-2 border-emerald-500/30 p-3 rounded-xl text-emerald-500 font-bold text-right text-xl outline-none focus:border-emerald-500" 
-                          type="number" 
-                          value={editPrice} 
-                          onChange={e => setEditPrice(parseFloat(e.target.value) || 0)} 
-                        />
-                        <select 
-                          className="bg-slate-900 border border-slate-700 p-3 rounded-xl text-xs font-bold" 
-                          value={editUnit} 
-                          onChange={e => setEditUnit(e.target.value as any)}
-                        >
-                          <option value="litry">l</option>
-                          <option value="kusy">ks</option>
-                        </select>
-                      </div>
-                    </td>
-                    <td className="p-4 text-right space-x-3">
-                      <button onClick={() => handleSaveEdit(item.id)} className="bg-emerald-600/20 text-emerald-500 px-4 py-2 rounded-lg font-black text-[10px] uppercase hover:bg-emerald-600 hover:text-white transition-all shadow-lg shadow-emerald-900/10">Uložit</button>
-                      <button onClick={() => setEditingId(null)} className="text-slate-500 font-black text-[10px] uppercase hover:text-white">Zrušit</button>
-                    </td>
-                  </>
-                ) : (
-                  /* STANDARDNÍ ŘÁDEK */
-                  <>
-                    <td className="p-6">
-                      <div className="font-black text-white uppercase group-hover:text-blue-400 transition-colors tracking-tight text-lg leading-tight">{item.name}</div>
-                      <div className="text-[10px] text-slate-600 font-bold uppercase mt-1 italic tracking-wider opacity-60">ID: #{item.id}</div>
-                    </td>
-                    <td className="p-6 text-center">
-                      <div className="inline-block bg-slate-950/50 border border-slate-800/50 px-6 py-3 rounded-2xl shadow-inner group-hover:border-blue-500/20 transition-all">
-                        <span className="text-3xl font-black text-blue-500 font-mono tracking-tighter">
-                          {/* Logika zaokrouhlení pro zobrazení */}
-                          {item.unit_type === 'kusy' 
-                            ? Math.floor(item.current_stock) 
-                            : item.current_stock.toFixed(2)}
-                        </span>
-                        <span className="ml-2 text-[10px] font-black text-slate-600 uppercase">{item.unit_type === 'litry' ? 'l' : 'ks'}</span>
-                      </div>
-                    </td>
-                    <td className="p-6 text-center">
-                      <div className="text-3xl font-black text-emerald-500 tracking-tighter">
-                        {item.selling_price.toFixed(0)}
-                        <span className="text-sm ml-1 opacity-50 font-normal">Kč</span>
-                      </div>
-                      <div className="text-[8px] text-slate-700 font-black uppercase mt-1">za jednotku</div>
-                    </td>
-                    <td className="p-6 text-right">
-                      <div className="flex flex-col items-end gap-1">
-                        <button onClick={() => handleStartEdit(item)} className="text-blue-500 hover:text-white hover:bg-blue-500 px-3 py-1.5 rounded-md font-black text-[10px] uppercase transition-all tracking-widest border border-blue-500/20">Upravit</button>
-                        <button onClick={() => onDeleteItem(item)} className="text-slate-700 hover:text-red-500 px-3 py-1.5 rounded-md font-black text-[10px] uppercase transition-all tracking-widest">Smazat</button>
-                      </div>
-                    </td>
-                  </>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="space-y-4 pb-20">
+        <div className="flex justify-between items-center px-4">
+          <h3 className="text-slate-500 font-black text-[10px] uppercase tracking-[0.3em]">Aktuální sklad</h3>
+          <button onClick={onRefresh} className="text-blue-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors">Aktualizovat data</button>
+        </div>
+
+        <div className="grid gap-4">
+          {items.map(item => (
+            editingId === item.id ? (
+              /* EDITAČNÍ KARTA */
+              <div key={item.id} className="bg-slate-800 p-6 rounded-3xl border-2 border-blue-500 shadow-2xl animate-in zoom-in-95 duration-200">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                  <div className="md:col-span-4">
+                    <label className="text-[8px] font-black text-blue-400 uppercase ml-2 mb-1 block">Název produktu</label>
+                    <input 
+                      className="w-full bg-slate-950 border-2 border-slate-700 p-3 rounded-xl font-bold text-white outline-none focus:border-blue-500" 
+                      value={editName} 
+                      onChange={e => setEditName(e.target.value)} 
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-[8px] font-black text-blue-400 uppercase ml-2 mb-1 block">Stav na skladě</label>
+                    <input 
+                      className="w-full bg-slate-950 border-2 border-slate-700 p-3 rounded-xl text-blue-400 font-mono font-bold text-center outline-none focus:border-blue-500" 
+                      type="number" 
+                      step={editUnit === 'kusy' ? '1' : '0.01'} 
+                      value={editStock} 
+                      onChange={e => setEditStock(parseFloat(e.target.value) || 0)} 
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-[8px] font-black text-blue-400 uppercase ml-2 mb-1 block">Prodejní cena</label>
+                    <input 
+                      className="w-full bg-slate-950 border-2 border-slate-700 p-3 rounded-xl text-emerald-500 font-bold text-right outline-none focus:border-emerald-500" 
+                      type="number" 
+                      value={editPrice} 
+                      onChange={e => setEditPrice(parseFloat(e.target.value) || 0)} 
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-[8px] font-black text-blue-400 uppercase ml-2 mb-1 block">Jednotka</label>
+                    <select 
+                      className="w-full bg-slate-950 border-2 border-slate-700 p-3 rounded-xl text-xs font-bold text-white outline-none" 
+                      value={editUnit} 
+                      onChange={e => setEditUnit(e.target.value as any)}
+                    >
+                      <option value="litry">Litry (L)</option>
+                      <option value="kusy">Kusy (KS)</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2 flex flex-col gap-2">
+                    <button onClick={() => handleSaveEdit(item.id)} className="w-full bg-emerald-600 text-white py-2 rounded-xl font-black text-[10px] uppercase hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-900/20">Uložit</button>
+                    <button onClick={() => setEditingId(null)} className="w-full text-slate-400 font-black text-[10px] uppercase hover:text-white transition-all">Zrušit</button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* STANDARDNÍ KARTA */
+              <StockCard 
+                key={item.id} 
+                item={item} 
+                onEdit={handleStartEdit} 
+                onDelete={onDeleteItem} 
+              />
+            )
+          ))}
+        </div>
       </div>
     </div>
   );

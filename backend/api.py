@@ -22,34 +22,23 @@ def delete_item(item_id):
 
 @api_bp.route('/items/<int:item_id>', methods=['PUT'])
 def update_item(item_id):
-    item = Item.query.get(item_id)
+    item = db.session.get(Item, item_id) # Modernější způsob než Item.query.get
     if not item:
-        return jsonify({'message': f'Položka s ID {item_id} nebyla nalezena.'}), 404
+        return jsonify({'message': 'Položka nenalezena.'}), 404
 
     data = request.json
-    name = data.get('name')
-    unit_type = data.get('unit_type')
-    selling_price = data.get('selling_price')
-
     try:
-        if name:
-            item.name = name
-        if unit_type:
-            item.unit_type = unit_type
-        if selling_price is not None:
-            item.selling_price = float(selling_price)
+        if 'name' in data: item.name = data['name']
+        if 'unit_type' in data: item.unit_type = data['unit_type']
+        if 'selling_price' in data: item.selling_price = float(data['selling_price'])
+        # TATO ČÁST CHYBĚLA:
+        if 'current_stock' in data: item.current_stock = float(data['current_stock'])
 
         db.session.commit()
         return jsonify(item.to_dict()), 200
-    except IntegrityError:
-        db.session.rollback()
-        return jsonify({'message': f'Položka se jménem {name} již existuje.'}), 409
-    except ValueError:
-        db.session.rollback()
-        return jsonify({'message': 'Chybný formát prodejní ceny.'}), 400
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Došlo k chybě DB při aktualizaci: {str(e)}'}), 500
+        return jsonify({'message': f'Chyba: {str(e)}'}), 500
 
 @api_bp.route('/items', methods=['POST'])
 def add_item():

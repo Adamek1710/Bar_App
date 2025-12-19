@@ -1,6 +1,6 @@
 import React from 'react';
 import type { InventoryEntry } from '../api';
-import { InventoryCard } from './InventoryCard'; // Importujeme kartu
+import { InventoryCard } from './InventoryCard'; 
 
 interface Props {
   entries: InventoryEntry[];

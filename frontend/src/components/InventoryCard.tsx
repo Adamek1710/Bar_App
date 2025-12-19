@@ -33,11 +33,15 @@ export const InventoryCard: React.FC<Props> = ({ entry, onUpdate }) => {
             onChange={(e) => onUpdate(entry.id, parseFloat(e.target.value) || 0)}
           />
         </div>
-        <div className="border-l-2 border-slate-800 pl-6 min-w-[100px] text-right">
+
+        <div className="border-l border-slate-800 pl-6 min-w-[100px] text-right">
           <span className="text-[9px] text-slate-600 font-black uppercase tracking-widest mb-1 block">Rozdíl</span>
-          <span className={`text-2xl font-black font-mono ${isLoss ? 'text-red-500' : 'text-emerald-500'}`}>
-            {entry.difference_quantity > 0 ? '+' : ''}{entry.difference_quantity.toFixed(1)}
-          </span>
+          <div className={`text-xl font-bold font-mono ${isLoss ? 'text-red-500' : 'text-emerald-500'}`}>
+            {entry.difference_quantity > 0 ? '+' : ''}{entry.difference_quantity.toFixed(2)}
+          </div>
+          <div className="text-[8px] text-slate-700 font-bold uppercase">
+             {entry.difference_value.toFixed(0)} Kč
+          </div>
         </div>
       </div>
     </div>

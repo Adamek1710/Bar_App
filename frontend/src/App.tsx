@@ -121,6 +121,7 @@ function App() {
             onDeleteItem={handleDeleteItem}
             onUpdateItem={handleUpdateItem}
             onRefresh={loadData}
+            onBulkImport={handleBulkImport}
           />
         ) : (
           <InventoryMode 

@@ -41,7 +41,7 @@ class InventorySession(db.Model):
 #Dočasný záznam při inventuře
 class InventoryEntry(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    item_id = db.Column(db.Integer, db.ForeignKey('item.id'), nullable=False)
+    item_id = db.Column(db.Integer, db.ForeignKey('item.id', ondelete='CASCADE'), nullable=False)
     session_id = db.Column(db.Integer, db.ForeignKey('inventory_session.id'), nullable=False)
 
     counted_quantity = db.Column(db.Float, default=0.0)
@@ -50,7 +50,7 @@ class InventoryEntry(db.Model):
                                 onupdate=lambda: datetime.now(timezone.utc))
     last_updated_by_client_id = db.Column(db.String(50), nullable=True) 
 
-    item = db.relationship('Item', backref='entries', lazy=True)
+    item = db.relationship('Item', backref=db.backref('entries', cascade='all, delete-orphan', lazy=True))
     session = db.relationship('InventorySession', backref=db.backref('entries', lazy=True))
 
     __table_args__ = (UniqueConstraint('session_id', 'item_id', name='_session_item_uc'),)
