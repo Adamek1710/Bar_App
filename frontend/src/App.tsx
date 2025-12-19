@@ -9,10 +9,25 @@ import type { InventoryEntry, Item } from './api';
 import { StatusHeader } from './components/StatusHeader';
 import { InventoryMode } from './components/InventoryMode';
 import { StockMode } from './components/StockMode';
+import { MenuManager } from './MenuManager';
 
 const CLIENT_ID = "frontend-tester-007";
 
 function App() {
+  const path = window.location.pathname
+  if (path === '/menu') {
+    return <MenuManager adminMode={false} />;
+  }
+
+  if (path === '/menu-admin') {
+    return (
+      <>
+        <button onClick={() => window.location.pathname = '/'} className="fixed top-4 left-4 z-50 bg-slate-800 p-2 rounded-full text-xs">← Zpět do skladu</button>
+        <MenuManager adminMode={true} />
+      </>
+    );
+  }
+
   const [inventoryState, setInventoryState] = useState<{ is_running: boolean, entries: InventoryEntry[], sessionId: number | null }>({
     is_running: false, entries: [], sessionId: null
   });
@@ -101,7 +116,12 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8">
       <div className="max-w-4xl mx-auto pb-20">
-        
+        <button 
+          onClick={() => window.location.pathname = '/menu-admin'}
+          className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-500 transition-colors"
+        >
+          ⚙️ Upravit Nápojový lístek
+        </button>
         {/* Notifikace */}
         {successMessage && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-8 py-3 rounded-2xl shadow-2xl z-50 animate-bounce font-bold border border-blue-400">
