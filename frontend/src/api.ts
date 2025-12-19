@@ -31,6 +31,12 @@ export interface InventoryEntry {
     difference_value: number;
 }
 
+//IMPORT
+export const bulkImportItems = async (items: any[]) => {
+    const promises = items.map(item => api.post('/items', item));
+    return Promise.all(promises);
+};
+
 // ------------------
 //     API FUNKCE
 // ------------------
@@ -52,12 +58,14 @@ export const updateItem = async (
     id: number,
     name: string,
     unitType: 'litry' | 'kusy',
-    sellingPrice: number
+    sellingPrice: number,
+    currentStock: number
 ): Promise<Item> => {
     const response = await api.put(`/items/${id}`, {
         name: name,
         unit_type: unitType,
-        selling_price: sellingPrice
+        selling_price: sellingPrice,
+        current_stock: currentStock
     });
     return response.data;
 };
