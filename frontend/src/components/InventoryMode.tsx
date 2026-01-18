@@ -5,7 +5,7 @@ import { InventoryCard } from './InventoryCard';
 interface Props {
   entries: InventoryEntry[];
   totalDiff: number;
-  onUpdate: (id: number, val: number) => void;
+  onUpdate: (id: number, qty: number | null, weight: number | null) => void;
   onFinish: () => void;
 }
 

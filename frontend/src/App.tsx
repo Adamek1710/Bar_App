@@ -57,17 +57,24 @@ function App() {
   }, []);
   
   //HANDLERY PRO STOCK MODE
-  const handleAddItem = async (name: string, unit: 'litry' | 'kusy', price: number) => {
+  const handleAddItem = async (name: string, unit: 'litry' | 'kusy', price: number, extra?: any) => {
     try {
-      await addItem(name, unit, price);
+      await addItem(name, unit, price, extra);
       showSuccess("Položka přidána");
       await loadData();
     } catch (e) { setError("Chyba při přidávání položky."); }
   };
 
-  const handleUpdateItem = async (id: number, name: string, unit: 'litry' | 'kusy', price: number, stock: number) => {
+  const handleUpdateItem = async (
+    id: number,
+    name: string,
+    unit: 'litry' | 'kusy', 
+    price: number, 
+    stock: number,
+    extra?: any
+  ) => {
     try {
-      await updateItem(id, name, unit, price, stock); 
+      await updateItem(id, name, unit, price, stock, extra); 
       showSuccess("Položka aktualizována");
       await loadData();
     } catch (e) { setError("Chyba při aktualizaci."); }
@@ -147,7 +154,7 @@ function App() {
           <InventoryMode 
             entries={inventoryState.entries}
             totalDiff={totalDiff}
-            onUpdate={(id, val) => updateInventoryEntry(id, val, CLIENT_ID)}
+            onUpdate={(id, qty, weight) => updateInventoryEntry(id, qty, weight, CLIENT_ID)}
             onFinish={() => inventoryState.sessionId && finishInventory(inventoryState.sessionId).then(loadData)}
           />
         )}

@@ -13,11 +13,29 @@ export const StockCard: React.FC<StockCardProps> = ({ item, onEdit, onDelete }) 
       <div className="font-black text-white uppercase text-xl group-hover:text-blue-400 transition-colors tracking-tight">
         {item.name}
       </div>
-      <div className="text-[10px] text-slate-600 font-bold uppercase mt-1 italic tracking-wider opacity-60">
-        ID: #{item.id}
+      <div className="flex items-center justify-center md:justify-start gap-3 mt-1">
+        <div className="text-[10px] text-slate-600 font-bold uppercase italic tracking-wider opacity-60">
+          ID: #{item.id}
+        </div>
+        {item.unit_type === 'litry' && (
+          <div className="flex flex-wrap gap-2">
+             {/* TADY JE TA ZMĚNA: Aktuální váha načaté lahve */}
+             <span className="text-[8px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-black uppercase border border-blue-400/30 shadow-sm shadow-blue-900/40">
+               ⚖️ Aktuálně: {item.current_weight || 0}g
+             </span>
+             
+             <span className="text-[8px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-black uppercase border border-slate-700">
+               Plná: {item.full_bottle_weight}g
+             </span>
+             <span className="text-[8px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-black uppercase border border-slate-700">
+               Dávka: {item.shot_volume}L
+             </span>
+          </div>
+        )}
       </div>
     </div>
     
+    {/* Zbytek komponenty zůstává stejný... */}
     <div className="flex items-center gap-8">
       <div className="text-center md:text-right">
         <span className="text-[9px] text-slate-600 font-black uppercase tracking-widest mb-1 block">Skladem</span>
