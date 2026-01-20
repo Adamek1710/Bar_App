@@ -7,20 +7,30 @@ const styles = {
   wrapper: "space-y-8 animate-in fade-in duration-500 pb-20",
   mainBtn: "w-full bg-blue-600 hover:bg-blue-500 py-8 rounded-3xl font-black text-2xl shadow-xl shadow-blue-900/20 transition-all active:scale-[0.98] text-white tracking-tight",
   
-  // Tab switch
   tabsWrapper: "flex gap-2 p-1 bg-slate-900 w-fit rounded-2xl border border-slate-800",
   tabBtn: (active: boolean) => `px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${active ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`,
 
-  // General
-  formCard: "bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl animate-in slide-in-from-left-4 duration-300",
-  editCard: "bg-slate-800 p-6 rounded-3xl border-2 border-blue-500 shadow-2xl animate-in zoom-in-95 duration-200",
+  // Form styles
+  cardBase: "p-6 rounded-3xl border shadow-xl transition-all duration-300",
+  cardAdd: "bg-slate-900 border-slate-800 animate-in slide-in-from-left-4",
+  cardEdit: "bg-slate-800 border-blue-500/50 ring-1 ring-blue-500/20 animate-in zoom-in-95",
+  
+  // Grid
+  formGrid: "grid grid-cols-1 md:grid-cols-12 gap-4 items-end",
   
   // Inputs
-  inputBase: "w-full bg-slate-950 border-2 border-slate-800 p-4 rounded-2xl focus:border-blue-500 outline-none transition-all text-white placeholder:text-slate-700",
-  inputMini: "w-full bg-slate-900 border border-slate-800 p-2 rounded-lg text-xs text-white outline-none focus:border-blue-500",
-  labelMini: "text-[8px] font-black text-blue-500 uppercase ml-1 mb-1 block",
+  fieldWrapper: "flex flex-col gap-1.5",
+  label: "text-[9px] font-black text-slate-500 uppercase tracking-wider ml-1",
+  input: "w-full bg-slate-950 border-2 border-slate-800/50 p-3 rounded-2xl focus:border-blue-500 outline-none transition-all text-white placeholder:text-slate-700 font-bold",
   
-  // Headers
+  // Weight section
+  extraGrid: "grid grid-cols-2 md:grid-cols-4 gap-4 p-4 mt-4 bg-black/20 rounded-2xl border border-white/5",
+  
+  // Buttons
+  btnPrimary: "w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-2xl font-black uppercase text-xs transition-all shadow-lg active:scale-95",
+  btnSuccess: "w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-2xl font-black uppercase text-xs transition-all shadow-lg active:scale-95",
+  btnGhost: "w-full text-slate-500 hover:text-white py-2 font-black uppercase text-[10px] transition-colors",
+
   sectionHeader: "flex justify-between items-center px-4 mb-4",
   sectionLabel: "text-slate-500 font-black text-[10px] uppercase tracking-[0.3em]"
 };
@@ -104,71 +114,52 @@ export const StockMode: React.FC<Props> = ({
         SPUSTIT NOVOU INVENTURU
       </button>
 
+      {/* --- ADDING --- */}
       <div className="space-y-4">
-        {/* TABY */}
         <div className={styles.tabsWrapper}>
-          <button onClick={() => setActiveTab('manual')} className={styles.tabBtn(activeTab === 'manual')}>
-            Ruční přidání
-          </button>
-          <button onClick={() => setActiveTab('import')} className={styles.tabBtn(activeTab === 'import')}>
-            Hromadný import
-          </button>
+          <button onClick={() => setActiveTab('manual')} className={styles.tabBtn(activeTab === 'manual')}>Ruční přidání</button>
+          <button onClick={() => setActiveTab('import')} className={styles.tabBtn(activeTab === 'import')}>Hromadný import</button>
         </div>
 
-        {/* FORMS SEKCE */}
-        <div className="min-h-[120px]">
-          {activeTab === 'manual' ? (
-            <div className={styles.formCard}>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                  <div className="md:col-span-5">
-                    <input className={styles.inputBase} placeholder="Název produktu..." value={name} onChange={e => setName(e.target.value)} />
-                  </div>
-                  <div className="md:col-span-3">
-                    <select className={styles.inputBase} value={unit} onChange={e => setUnit(e.target.value as any)}>
-                      <option value="litry">Litry (Alkohol)</option>
-                      <option value="kusy">Kusy (Ostatní)</option>
-                    </select>
-                  </div>
-                  <div className="md:col-span-2 relative">
-                    <input className={`${styles.inputBase} text-right font-bold text-emerald-500`} type="number" value={price || ''} onChange={e => setPrice(parseFloat(e.target.value) || 0)} />
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-white/30 uppercase">Kč</span>
-                  </div>
-                  <div className="md:col-span-2">
-                    <button onClick={handleAddNew} className="w-full h-full bg-white text-black hover:bg-blue-600 hover:text-white rounded-2xl font-black uppercase text-xs transition-all shadow-lg">Přidat</button>
-                  </div>
-                </div>
-
-                {unit === 'litry' && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-950 rounded-2xl border border-blue-500/10">
-                    <div>
-                      <label className={styles.labelMini}>Váha plné (g)</label>
-                      <input type="number" className={styles.inputMini} value={fullWeight || ''} onChange={e => setFullWeight(parseFloat(e.target.value) || 0)} />
-                    </div>
-                    <div>
-                      <label className={styles.labelMini}>Váha prázdné (g)</label>
-                      <input type="number" className={styles.inputMini} value={emptyWeight || ''} onChange={e => setEmptyWeight(parseFloat(e.target.value) || 0)} />
-                    </div>
-                    <div>
-                      <label className={styles.labelMini}>Váha panáka (g)</label>
-                      <input type="number" className={styles.inputMini} value={shotWeight || ''} onChange={e => setShotWeight(parseFloat(e.target.value) || 0)} />
-                    </div>
-                    <div>
-                      <label className={styles.labelMini}>Objem panáka (L)</label>
-                      <input type="number" step="0.01" className={styles.inputMini} value={shotVolume || ''} onChange={e => setShotVolume(parseFloat(e.target.value) || 0)} />
-                    </div>
-                  </div>
-                )}
+        {activeTab === 'manual' ? (
+          <div className={`${styles.cardBase} ${styles.cardAdd}`}>
+            <div className={styles.formGrid}>
+              <div className="md:col-span-5 border-l-2 border-blue-500 pl-4">
+                <label className={styles.label}>Název produktu</label>
+                <input className={styles.input} placeholder="Např. Jameson 1L..." value={name} onChange={e => setName(e.target.value)} />
+              </div>
+              <div className="md:col-span-3">
+                <label className={styles.label}>Jednotka</label>
+                <select className={styles.input} value={unit} onChange={e => setUnit(e.target.value as any)}>
+                  <option value="litry">Litry (Alkohol)</option>
+                  <option value="kusy">Kusy (Ostatní)</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className={styles.label}>Prodejní cena</label>
+                <input className={`${styles.input} text-emerald-500`} type="number" value={price || ''} onChange={e => setPrice(parseFloat(e.target.value) || 0)} />
+              </div>
+              <div className="md:col-span-2">
+                <button onClick={handleAddNew} className={styles.btnPrimary}>Přidat</button>
               </div>
             </div>
-          ) : (
-            <CSVImporter onImport={async (data) => { await onBulkImport(data); onRefresh(); }} />
-          )}
-        </div>
+
+            {unit === 'litry' && (
+              <div className={styles.extraGrid}>
+                <div className={styles.fieldWrapper}><label className={styles.label}>Plná láhev (g)</label><input type="number" className={styles.input} value={fullWeight || ''} onChange={e => setFullWeight(parseFloat(e.target.value) || 0)} /></div>
+                <div className={styles.fieldWrapper}><label className={styles.label}>Prázdná (g)</label><input type="number" className={styles.input} value={emptyWeight || ''} onChange={e => setEmptyWeight(parseFloat(e.target.value) || 0)} /></div>
+                <div className={styles.fieldWrapper}><label className={styles.label}>Váha panáka (g)</label><input type="number" className={styles.input} value={shotWeight || ''} onChange={e => setShotWeight(parseFloat(e.target.value) || 0)} /></div>
+                <div className={styles.fieldWrapper}><label className={styles.label}>Objem (L)</label><input type="number" step="0.01" className={styles.input} value={shotVolume || ''} onChange={e => setShotVolume(parseFloat(e.target.value) || 0)} /></div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <CSVImporter onImport={async (data) => { await onBulkImport(data); onRefresh(); }} />
+        )}
       </div>
 
-      {/* VÝPIS SKLADU */}
-      <div>
+      {/* --- LIST AND EDIT--- */}
+      <div className="space-y-4">
         <div className={styles.sectionHeader}>
           <h3 className={styles.sectionLabel}>Aktuální sklad</h3>
           <button onClick={onRefresh} className="text-blue-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors">Aktualizovat data</button>
@@ -177,56 +168,43 @@ export const StockMode: React.FC<Props> = ({
         <div className="grid gap-4">
           {items.map(item => (
             editingId === item.id ? (
-              <div key={item.id} className={styles.editCard}>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-                    <div className="md:col-span-4">
-                      <label className={styles.labelMini}>Název produktu</label>
-                      <input className={styles.inputBase} value={editName} onChange={e => setEditName(e.target.value)} />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className={styles.labelMini}>Skladem</label>
-                      <input className={`${styles.inputBase} text-blue-400 text-center font-mono`} type="number" value={editStock} onChange={e => setEditStock(parseFloat(e.target.value) || 0)} />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className={styles.labelMini}>Cena (Kč)</label>
-                      <input className={`${styles.inputBase} text-emerald-500 text-right`} type="number" value={editPrice} onChange={e => setEditPrice(parseFloat(e.target.value) || 0)} />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className={styles.labelMini}>Jednotka</label>
-                      <select className={styles.inputBase} value={editUnit} onChange={e => setEditUnit(e.target.value as any)}>
-                        <option value="litry">Litry</option>
-                        <option value="kusy">Kusy</option>
-                      </select>
-                    </div>
-                    <div className="md:col-span-2 flex flex-col gap-2">
-                      <button onClick={() => handleSaveEdit(item.id)} className="bg-emerald-600 text-white py-2 rounded-xl font-black text-[10px] uppercase">Uložit</button>
-                      <button onClick={() => setEditingId(null)} className="text-slate-400 font-black text-[10px] uppercase">Zrušit</button>
-                    </div>
+              
+              /* --- EDIT FORM --- */
+              <div key={item.id} className={`${styles.cardBase} ${styles.cardEdit}`}>
+                <div className={styles.formGrid}>
+                  <div className="md:col-span-4 border-l-2 border-blue-400 pl-4">
+                    <label className={styles.label}>Název produktu</label>
+                    <input className={styles.input} value={editName} onChange={e => setEditName(e.target.value)} />
                   </div>
-
-                  {editUnit === 'litry' && (
-                    <div className="grid grid-cols-4 gap-4 p-3 bg-slate-900/50 rounded-xl border border-white/5">
-                      {/* Zde by šly použít styles.inputMini a styles.labelMini stejně jako nahoře */}
-                      <div>
-                        <label className={styles.labelMini}>Plná (g)</label>
-                        <input type="number" className={styles.inputMini} value={editFullWeight} onChange={e => setEditFullWeight(parseFloat(e.target.value) || 0)} />
-                      </div>
-                      <div>
-                        <label className={styles.labelMini}>Prázdná (g)</label>
-                        <input type="number" className={styles.inputMini} value={editEmptyWeight} onChange={e => setEditEmptyWeight(parseFloat(e.target.value) || 0)} />
-                      </div>
-                      <div>
-                        <label className={styles.labelMini}>Panák (g)</label>
-                        <input type="number" className={styles.inputMini} value={editShotWeight} onChange={e => setEditShotWeight(parseFloat(e.target.value) || 0)} />
-                      </div>
-                      <div>
-                        <label className={styles.labelMini}>Objem (L)</label>
-                        <input type="number" step="0.01" className={styles.inputMini} value={editShotVolume} onChange={e => setEditShotVolume(parseFloat(e.target.value) || 0)} />
-                      </div>
-                    </div>
-                  )}
+                  <div className="md:col-span-2">
+                    <label className={styles.label}>Skladem</label>
+                    <input className={`${styles.input} text-blue-400 font-mono`} type="number" value={editStock} onChange={e => setEditStock(parseFloat(e.target.value) || 0)} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className={styles.label}>Cena (Kč)</label>
+                    <input className={`${styles.input} text-emerald-500`} type="number" value={editPrice} onChange={e => setEditPrice(parseFloat(e.target.value) || 0)} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className={styles.label}>Jednotka</label>
+                    <select className={styles.input} value={editUnit} onChange={e => setEditUnit(e.target.value as any)}>
+                      <option value="litry">Litry</option>
+                      <option value="kusy">Kusy</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2 space-y-2">
+                    <button onClick={() => handleSaveEdit(item.id)} className={styles.btnSuccess}>Uložit</button>
+                    <button onClick={() => setEditingId(null)} className={styles.btnGhost}>Zrušit</button>
+                  </div>
                 </div>
+
+                {editUnit === 'litry' && (
+                  <div className={styles.extraGrid}>
+                    <div className={styles.fieldWrapper}><label className={styles.label}>Plná (g)</label><input type="number" className={styles.input} value={editFullWeight} onChange={e => setEditFullWeight(parseFloat(e.target.value) || 0)} /></div>
+                    <div className={styles.fieldWrapper}><label className={styles.label}>Prázdná (g)</label><input type="number" className={styles.input} value={editEmptyWeight} onChange={e => setEditEmptyWeight(parseFloat(e.target.value) || 0)} /></div>
+                    <div className={styles.fieldWrapper}><label className={styles.label}>Panák (g)</label><input type="number" className={styles.input} value={editShotWeight} onChange={e => setEditShotWeight(parseFloat(e.target.value) || 0)} /></div>
+                    <div className={styles.fieldWrapper}><label className={styles.label}>Objem (L)</label><input type="number" step="0.01" className={styles.input} value={editShotVolume} onChange={e => setEditShotVolume(parseFloat(e.target.value) || 0)} /></div>
+                  </div>
+                )}
               </div>
             ) : (
               <StockCard key={item.id} item={item} onEdit={handleStartEdit} onDelete={onDeleteItem} />
