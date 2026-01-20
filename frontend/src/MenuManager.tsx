@@ -1,6 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { fetchPublicMenu, addPublicMenuItem, deletePublicMenuItem } from './api';
-// Typ pro položku v menu
+
+const styles = {
+  wrapper: "min-h-screen bg-black text-white p-6 pb-24",
+  container: "max-w-md mx-auto",
+  
+  // HEADER
+  header: "text-4xl font-black italic mb-8 text-center",
+  adminBadge: "block text-xs text-red-500 not-italic uppercase tracking-widest",
+  
+  // Admin box
+  adminBox: "bg-slate-900 p-4 rounded-2xl mb-10 border border-blue-500/30",
+  input: "w-full bg-black p-2 rounded mb-2 border border-slate-800 focus:border-blue-500 outline-none transition-colors",
+  inputSmall: "w-1/2 bg-black p-2 rounded border border-slate-800 focus:border-blue-500 outline-none transition-colors",
+  addBtn: "w-full bg-blue-600 hover:bg-blue-500 mt-4 py-2 rounded-xl font-bold transition-colors",
+  
+  // Menu Item
+  categoryTitle: "text-blue-500 text-sm font-black uppercase tracking-widest border-b border-slate-800 pb-1 mb-4",
+  itemRow: "flex justify-between items-center mb-4 group",
+  itemName: "font-bold",
+  itemVolume: "text-[10px] text-slate-500 font-normal ml-1",
+  itemPrice: "font-mono font-bold",
+  removeBtn: "text-red-500 text-xs hover:scale-125 transition-transform p-1"
+};
+
 interface MenuItem {
   id: number;
   category: string;
@@ -32,51 +55,60 @@ export const MenuManager = ({ adminMode = false }) => {
   const categories = Array.from(new Set(menu.map(i => i.category)));
 
   return (
-    <div className="min-h-screen bg-black text-white p-6 pb-24">
-      <div className="max-w-md mx-auto">
-        <h1 className="text-4xl font-black italic mb-8 text-center">
+    <div className={styles.wrapper}>
+      <div className={styles.container}>
+        <h1 className={styles.header}>
           BAR<span className="text-blue-500">MENU</span>
-          {adminMode && <span className="block text-xs text-red-500 not-italic uppercase tracking-widest">Režim úprav</span>}
+          {adminMode && <span className={styles.adminBadge}>Režim úprav</span>}
         </h1>
 
         {adminMode && (
-          <div className="bg-slate-900 p-4 rounded-2xl mb-10 border border-blue-500/30">
+          <div className={styles.adminBox}>
             <input 
               placeholder="Kategorie (např. Pivo)" 
-              className="w-full bg-black p-2 rounded mb-2 border border-slate-800"
-              value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})}
+              className={styles.input}
+              value={newItem.category} 
+              onChange={e => setNewItem({...newItem, category: e.target.value})}
             />
             <input 
               placeholder="Název nápoje" 
-              className="w-full bg-black p-2 rounded mb-2 border border-slate-800"
-              value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})}
+              className={styles.input}
+              value={newItem.name} 
+              onChange={e => setNewItem({...newItem, name: e.target.value})}
             />
             <div className="flex gap-2">
               <input 
-                placeholder="Míra" className="w-1/2 bg-black p-2 rounded border border-slate-800"
-                value={newItem.volume} onChange={e => setNewItem({...newItem, volume: e.target.value})}
+                placeholder="Míra" 
+                className={styles.inputSmall}
+                value={newItem.volume} 
+                onChange={e => setNewItem({...newItem, volume: e.target.value})}
               />
               <input 
-                type="number" placeholder="Cena" className="w-1/2 bg-black p-2 rounded border border-slate-800"
+                type="number"
+                placeholder="Cena" 
+                className={styles.inputSmall}
                 onChange={e => setNewItem({...newItem, price: parseInt(e.target.value)})}
               />
             </div>
-            <button onClick={addItem} className="w-full bg-blue-600 mt-4 py-2 rounded-xl font-bold">Přidat do lístku</button>
+            <button onClick={addItem} className={styles.addBtn}>Přidat do lístku</button>
           </div>
         )}
 
         {categories.map(cat => (
           <div key={cat} className="mb-8">
-            <h2 className="text-blue-500 text-sm font-black uppercase tracking-widest border-b border-slate-800 pb-1 mb-4">{cat}</h2>
+            <h2 className={styles.categoryTitle}>{cat}</h2>
+
             {menu.filter(i => i.category === cat).map(item => (
-              <div key={item.id} className="flex justify-between items-center mb-4 group">
+              <div key={item.id} className={styles.itemRow}>
                 <div>
-                  <div className="font-bold">{item.name} <span className="text-[10px] text-slate-500 font-normal">{item.volume}</span></div>
+                  <div className={styles.itemName}>{item.name} 
+                    <span className={styles.itemVolume}>{item.volume}</span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="font-mono font-bold">{item.price},-</span>
+                  <span className={styles.itemPrice}>{item.price},-</span>
                   {adminMode && (
-                    <button onClick={() => removeItem(item.id)} className="text-red-500 text-xs">✕</button>
+                    <button onClick={() => removeItem(item.id)} className={styles.removeBtn}>✕</button>
                   )}
                 </div>
               </div>
