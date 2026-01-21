@@ -1,15 +1,11 @@
 import React, { useState } from 'react';
+import ExcelJS from 'exceljs';
 
 const styles = {
-  //dropzone Container
   dropzone: "bg-slate-800/30 border-2 border-dashed border-slate-700 p-8 rounded-3xl text-center hover:border-blue-500 transition-all group",
-  
-  //  Visuals
   icon: "text-4xl mb-3 group-hover:scale-110 transition-transform italic",
   title: "text-white font-bold uppercase tracking-widest text-sm",
   subtitle: "text-[10px] text-slate-500 mt-2",
-  
-  // Hidden input
   hiddenInput: "hidden"
 };
 
@@ -20,56 +16,75 @@ interface Props {
 export const CSVImporter: React.FC<Props> = ({ onImport }) => {
   const [loading, setLoading] = useState(false);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setLoading(true);
     const reader = new FileReader();
 
+    // ExcelJS pracuje nejlépe s ArrayBuffer
+    reader.readAsArrayBuffer(file);
+
     reader.onload = async (event) => {
-      const text = event.target?.result as string;
-      const lines = text.split('\n');
-      const items = [];
-
-      //CSV parsing logic
-      for (let i = 1; i < lines.length; i++) {
-        const columns = lines[i].split(',');
-        if (columns.length < 5) continue;
-
-        const name = columns[0].trim();
-        const stock = parseFloat(columns[1]); // Column "Začátek"
-        const price = parseFloat(columns[4]); // Column "Cena"
-
-        if (name && !isNaN(price)) {
-          items.push({
-            name,
-            unit_type: 'litry',
-            current_stock: isNaN(stock) ? 0 : stock,
-            selling_price: price
-          });
-        }
-      }
-
       try {
-        await onImport(items);
-        alert(`Úspěšně naimportováno ${items.length} položek.`);
+        const buffer = event.target?.result as ArrayBuffer;
+        const workbook = new ExcelJS.Workbook();
+        
+        // Should get both .xlsx and .csv
+        await workbook.xlsx.load(buffer);
+        
+        const worksheet = workbook.worksheets[0] || workbook.getWorksheet(1);
+        if (!worksheet) {
+          alert("V souboru nebyl nalezen žádný list.");
+          setLoading(false);
+          return;
+        }
+        const items: any[] = [];
+
+        // ExcelJS indexuje řádky od 1. i=1 je hlavička, i=2 jsou data.
+        worksheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) return; // Přeskočit hlavičku
+
+          // row.values vrací pole, kde index 1 je sloupec A, index 2 sloupec B...
+          // Pozor: vrací buď pole nebo objekt, proto raději přistupujeme přes getCell
+          const nameValue = row.getCell(1).value;
+          const name = nameValue ? String(nameValue).trim() : '';
+
+          const stock = parseFloat(row.getCell(2).text);
+          const price = parseFloat(row.getCell(5).text); // Sloupec E (5. v pořadí)
+
+          if (name && !isNaN(price)) {
+            items.push({
+              name,
+              unit_type: 'litry',
+              current_stock: isNaN(stock) ? 0 : stock,
+              selling_price: price
+            });
+          }
+        });
+
+        if (items.length > 0) {
+          await onImport(items);
+          alert(`Úspěšně naimportováno ${items.length} položek přes ExcelJS.`);
+        } else {
+          alert("V souboru nebyla nalezena žádná platná data.");
+        }
       } catch (err) {
-        alert("Chyba při importu. Některé položky už možná existují.");
+        console.error("ExcelJS Error:", err);
+        alert("Chyba při zpracování souboru. Ujisti se, že jde o platný .xlsx soubor.");
       } finally {
         setLoading(false);
-        e.target.value = ''; // Input reset
+        e.target.value = '';
       }
     };
-
-    reader.readAsText(file);
   };
 
   return (
     <div className={styles.dropzone}>
       <input
         type="file"
-        accept=".csv"
+        accept=".xlsx"
         onChange={handleFileUpload}
         className={styles.hiddenInput}
         id="csv-upload"
@@ -77,14 +92,12 @@ export const CSVImporter: React.FC<Props> = ({ onImport }) => {
       />
       
       <label htmlFor="csv-upload" className="cursor-pointer">
-        <div className={styles.icon}>📊</div>
-        
+        <div className={styles.icon}>📁</div>
         <h4 className={styles.title}>
-          {loading ? 'Probíhá import...' : 'Importovat sklad z CSV'}
+          {loading ? 'Zpracovávám...' : 'Importovat Excel (exceljs)'}
         </h4>
-        
         <p className={styles.subtitle}>
-          Klikni pro výběr souboru (formát: Název, Začátek, ..., Cena)
+          Vyber soubor .xlsx (Sloupce: A:Název, B:Začátek, E:Cena)
         </p>
       </label>
     </div>

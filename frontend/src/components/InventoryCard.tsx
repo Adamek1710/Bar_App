@@ -85,7 +85,7 @@ export const InventoryCard: React.FC<Props> = ({ entry, onUpdate }) => {
         
         {/* Stock */}
         <div className="flex flex-col items-center lg:items-end">
-          <span className={`${styles.labelBase} text-slate-600`}>Systém</span>
+          <span className={`${styles.labelBase} text-slate-600`}>Původně</span>
           <div className="text-2xl font-mono font-bold text-slate-400 opacity-60">
             {entry.original_stock}
           </div>
@@ -96,7 +96,7 @@ export const InventoryCard: React.FC<Props> = ({ entry, onUpdate }) => {
         {/* INPUT: Pieces */}
         <div className="flex flex-col items-center">
           <span className={`${styles.labelBase} text-blue-500`}>
-            {entry.unit_type === 'litry' ? 'Celé Lahve' : 'Počet Kusů'}
+            {entry.unit_type === 'litry' ? 'Aktuální stav' : 'Počet Kusů'}
           </span>
           <input 
             type="number"
