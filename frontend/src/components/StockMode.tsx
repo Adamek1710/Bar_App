@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Item } from '../api';
 import { CSVImporter } from './CSVImport';
 import { StockCard } from './StockCard';
+import { ExcelExporter } from './CSVExport';
 
 const styles = {
   wrapper: "space-y-8 animate-in fade-in duration-500 pb-20",
@@ -46,9 +47,9 @@ interface Props {
 }
 
 export const StockMode: React.FC<Props> = ({ 
-  items, onStartInventory, onAddItem, onDeleteItem, onUpdateItem, onRefresh, onBulkImport
+  items, onStartInventory, onAddItem, onDeleteItem, onUpdateItem, onRefresh,
 }) => {
-  const [activeTab, setActiveTab] = useState<'manual' | 'import'>('manual');
+  const [activeTab, setActiveTab] = useState<'manual' | 'import' | 'export'>('manual');
   
   // Adding states
   const [name, setName] = useState('');
@@ -119,9 +120,10 @@ export const StockMode: React.FC<Props> = ({
         <div className={styles.tabsWrapper}>
           <button onClick={() => setActiveTab('manual')} className={styles.tabBtn(activeTab === 'manual')}>Ruční přidání</button>
           <button onClick={() => setActiveTab('import')} className={styles.tabBtn(activeTab === 'import')}>Hromadný import</button>
+          <button onClick={() => setActiveTab('export')} className={styles.tabBtn(activeTab === 'export')}>Hromadný export</button>
         </div>
 
-        {activeTab === 'manual' ? (
+        {activeTab === 'manual' && (
           <div className={`${styles.cardBase} ${styles.cardAdd}`}>
             <div className={styles.formGrid}>
               <div className="md:col-span-5 border-l-2 border-blue-500 pl-4">
@@ -153,8 +155,13 @@ export const StockMode: React.FC<Props> = ({
               </div>
             )}
           </div>
-        ) : (
-          <CSVImporter onImport={async (data) => { await onBulkImport(data); onRefresh(); }} />
+        )}
+
+        {activeTab === 'import' && (
+          <CSVImporter onImport={async () => { await onRefresh(); }} />
+        )}
+        {activeTab === 'export' && (
+          <ExcelExporter />
         )}
       </div>
 

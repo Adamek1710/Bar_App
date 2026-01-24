@@ -1,9 +1,10 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 import pandas as pd
 from .__init__ import db, socketio
 from .models import Item, LiquidItem, InventorySession, InventoryEntry, PublicMenuItem
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
+from io import BytesIO
 
 api_bp = Blueprint('api', __name__)
 
@@ -253,3 +254,35 @@ def upsert_item_in_db(name, stock, price):
         new_item = Item(name=name, current_stock=stock, selling_price=price, unit_type='litry')
         db.session.add(new_item)
     db.session.commit()
+
+@api_bp.route('/inventory/export', methods=['GET'])
+def export_inventory():
+    try:
+        items = Item.query.all()
+        
+        # 2. Převedení na seznam slovníků
+        data = []
+        for i in items:
+            data.append({
+                'Název': i.name,
+                'Sklad (l/ks)': i.current_stock,
+                'Jednotka': i.unit_type,
+                'Prodejní cena (Kč)': i.selling_price
+            })
+        
+        # 3. Vytvoření Excelu přes Pandas
+        df = pd.DataFrame(data)
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Aktuální sklad')
+        
+        output.seek(0)
+        
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name='sklad_export.xlsx'
+        )
+    except Exception as e:
+        return str(e), 500
