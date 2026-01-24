@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+import pandas as pd
 from .__init__ import db, socketio
 from .models import Item, LiquidItem, InventorySession, InventoryEntry, PublicMenuItem
 from datetime import datetime, timezone
@@ -207,3 +208,48 @@ def get_current_inventory():
         'is_running': True,
         'entries': inventory_data
     })
+
+@api_bp.route('/inventory/upload', methods=['POST'])
+def upload_inventory():
+    if 'file' not in request.files:
+        return "No file", 400
+    
+    file = request.files['file']
+    
+    try:
+        # Pandas přečte Excel na jeden řádek
+        # header=0 znamená, že první řádek je hlavička
+        df = pd.read_excel(file, header=0)
+
+        # Vybereme sloupce podle pořadí (A=0, B=1, E=4)
+        # a přejmenujeme si je pro snadnou práci
+        df = df.iloc[:, [0, 1, 4]] 
+        df.columns = ['name', 'stock', 'price']
+
+        items_processed = 0
+        for _, row in df.iterrows():
+            name = str(row['name']).strip()
+            # Pandas automaticky vyřeší vzorce i formáty na čísla (float)
+            stock = float(row['stock']) if pd.notnull(row['stock']) else 0.0
+            price = float(row['price']) if pd.notnull(row['price']) else 0.0
+
+            if name and name != 'nan':
+                # Tady zavoláš svou logiku pro uložení/update do DB
+                upsert_item_in_db(name, stock, price)
+                items_processed += 1
+
+        return jsonify({"status": "success", "processed": items_processed}), 200
+
+    except Exception as e:
+        print(f"Chyba při parsování: {e}")
+        return str(e), 500
+
+def upsert_item_in_db(name, stock, price):
+    existing = Item.query.filter_by(name=name).first()
+    if existing:
+        existing.current_stock = stock
+        existing.selling_price = price
+    else:
+        new_item = Item(name=name, current_stock=stock, selling_price=price, unit_type='litry')
+        db.session.add(new_item)
+    db.session.commit()
