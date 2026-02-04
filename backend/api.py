@@ -5,6 +5,7 @@ from .models import Item, LiquidItem, InventorySession, InventoryEntry, PublicMe
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 from io import BytesIO
+import traceback
 
 api_bp = Blueprint('api', __name__)
 
@@ -51,7 +52,8 @@ def delete_item(item_id):
         return jsonify({'message': f'Položka {item.name} byla úspěšně smazána.'}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Chyba při mazání položky: {str(e)}'}), 500
+        api_bp.logger.error(traceback.format_exc())
+        return "An internal error occured.", 500
 
 @api_bp.route('/items/<int:item_id>', methods=['PUT'])
 def update_item(item_id):
@@ -77,7 +79,8 @@ def update_item(item_id):
         return jsonify(item.to_dict()), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Chyba při aktualizaci: {str(e)}'}), 500
+        api_bp.logger.error(traceback.format_exc())
+        return "An internal error occured.", 500
 
 @api_bp.route('/items', methods=['POST'])
 def add_item():
@@ -106,7 +109,8 @@ def add_item():
         return jsonify(new_item.to_dict()), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 400
+        api_bp.logger.error(traceback.format_exc())
+        return "An internal error occured.", 400
 
 
 @api_bp.route('/items', methods=['GET'])
@@ -218,32 +222,26 @@ def upload_inventory():
     file = request.files['file']
     
     try:
-        # Pandas přečte Excel na jeden řádek
-        # header=0 znamená, že první řádek je hlavička
         df = pd.read_excel(file, header=0)
 
-        # Vybereme sloupce podle pořadí (A=0, B=1, E=4)
-        # a přejmenujeme si je pro snadnou práci
         df = df.iloc[:, [0, 1, 4]] 
         df.columns = ['name', 'stock', 'price']
 
         items_processed = 0
         for _, row in df.iterrows():
             name = str(row['name']).strip()
-            # Pandas automaticky vyřeší vzorce i formáty na čísla (float)
             stock = float(row['stock']) if pd.notnull(row['stock']) else 0.0
             price = float(row['price']) if pd.notnull(row['price']) else 0.0
 
             if name and name != 'nan':
-                # Tady zavoláš svou logiku pro uložení/update do DB
                 upsert_item_in_db(name, stock, price)
                 items_processed += 1
 
         return jsonify({"status": "success", "processed": items_processed}), 200
 
     except Exception as e:
-        print(f"Chyba při parsování: {e}")
-        return str(e), 500
+        api_bp.logger.error(traceback.format_exc())
+        return "Internal error with import", 500
 
 def upsert_item_in_db(name, stock, price):
     existing = Item.query.filter_by(name=name).first()
@@ -285,4 +283,5 @@ def export_inventory():
             download_name='sklad_export.xlsx'
         )
     except Exception as e:
-        return str(e), 500
+        api_bp.logger(traceback.format_exc())
+        return "An Internal error occured!", 500
