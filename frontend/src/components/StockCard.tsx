@@ -34,9 +34,10 @@ interface StockCardProps {
   item: Item;
   onEdit: (item: Item) => void;
   onDelete: (item: Item) => void;
+  showAdminFeatures?: boolean;
 }
 
-export const StockCard: React.FC<StockCardProps> = ({ item, onEdit, onDelete }) => (
+export const StockCard: React.FC<StockCardProps> = ({ item, onEdit, onDelete, showAdminFeatures = true }) => (
   <div className={styles.card}>
 
     {/* Info section*/}
@@ -92,14 +93,16 @@ export const StockCard: React.FC<StockCardProps> = ({ item, onEdit, onDelete }) 
       </div>
 
       {/* Actions */}
-      <div className={styles.btnWrapper}>
-        <button onClick={() => onEdit(item)} className={styles.btnEdit}>
-          Upravit
-        </button>
-        <button onClick={() => onDelete(item)} className={styles.btnDelete}>
-          Smazat
-        </button>
-      </div>
+      {showAdminFeatures && (
+        <div className={styles.btnWrapper}>
+          <button onClick={() => onEdit(item)} className={styles.btnEdit}>
+            Upravit
+          </button>
+          <button onClick={() => onDelete(item)} className={styles.btnDelete}>
+            Smazat
+          </button>
+        </div>
+      )}
 
     </div>
   </div>

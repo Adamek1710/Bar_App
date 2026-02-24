@@ -1,4 +1,4 @@
-from .__init__ import create_app, socketio
+from backend.__init__ import create_app, socketio
 
 # Vytvoření aplikace
 app = create_app()

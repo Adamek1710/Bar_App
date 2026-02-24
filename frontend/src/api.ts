@@ -1,11 +1,54 @@
 import axios from 'axios';
-import { io } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 
 const api = axios.create({
   baseURL: '/api', 
 });
 
-export const socket = io();
+// Add request interceptor to include auth token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Add response interceptor to handle auth errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid, remove it and redirect to login
+      localStorage.removeItem('auth_token');
+      window.location.reload();
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Create socket with authentication
+export const createSocket = (token?: string): Socket => {
+  const socketOptions: any = {};
+  
+  if (token) {
+    socketOptions.auth = {
+      token: token
+    };
+    socketOptions.query = {
+      token: token
+    };
+  }
+  
+  return io(socketOptions);
+};
+
+// Default socket (will be updated after login)
+export let socket = createSocket();
+
+export function updateSocketToken(token: string) {
+  socket = createSocket(token);
+}
 
 export interface Item {
   id: number;

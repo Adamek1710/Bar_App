@@ -1,179 +1,32 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  deleteItem, addItem, getCurrentInventory, startInventory, updateItem,
-  finishInventory, socket, updateInventoryEntry, fetchCurrentStock,
-  bulkImportItems
-} from './api';
-import type { InventoryEntry, Item } from './api';
+import React from 'react';
+import { AuthProvider, useAuth } from './auth/AuthContext';
+import { LoginForm } from './components/LoginForm';
+import AppContent from './AppContent';
 
-import { StatusHeader } from './components/StatusHeader';
-import { InventoryMode } from './components/InventoryMode';
-import { StockMode } from './components/StockMode';
-import { MenuManager } from './MenuManager';
-
-const CLIENT_ID = "frontend-tester-007";
-
-const styles = {
-  layout: "min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8",
-  container: "max-w-4xl mx-auto pb-20",
-  
-  settingsBtn: "text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-500 transition-colors",
-  backBtn: "fixed top-4 left-4 z-50 bg-slate-800 p-2 rounded-full text-xs hover:bg-slate-700 transition-colors",
-  
-  // Notifications and states
-  toast: "fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-8 py-3 rounded-2xl shadow-2xl z-50 animate-bounce font-bold border border-blue-400",
-  error: "bg-red-500/10 border border-red-500/50 p-4 rounded-xl mb-6 text-red-400",
-  
-  // Loader
-  loaderWrapper: "h-screen bg-slate-950 flex items-center justify-center",
-  loaderText: "text-blue-500 font-black text-2xl animate-pulse tracking-tighter italic"
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppWrapper />
+    </AuthProvider>
+  );
 };
 
-function App() {
-  const path = window.location.pathname
-  if (path === '/menu') return <MenuManager adminMode={false} />;
+const AppWrapper: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
 
-  if (path === '/menu-admin') {
+  if (isLoading) {
     return (
-      <div className={styles.layout}>
-        <button onClick={() => window.location.pathname = '/'} className={styles.backBtn}>
-          ← Zpět do skladu
-        </button>
-        <MenuManager adminMode={true} />
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-blue-500 font-black text-2xl animate-pulse tracking-tighter italic">BAR_CONTROL</div>
       </div>
     );
   }
 
-  // --- STATE ---
-  const [inventoryState, setInventoryState] = useState<{ is_running: boolean, entries: InventoryEntry[], sessionId: number | null }>({
-    is_running: false, entries: [], sessionId: null
-  });
-  const [stockItems, setStockItems] = useState<Item[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  if (!isAuthenticated) {
+    return <LoginForm />;
+  }
 
-  // --- LOGIC ---
-  const totalDiff = useMemo(() => {
-    return (inventoryState.entries || []).reduce((sum, entry) => {
-        return sum + (entry.difference_value || 0);
-        }, 0);
-  }, [inventoryState.entries]);
-  
-  const showSuccess = (msg: string) => {
-    setSuccessMessage(msg);
-    setTimeout(() => setSuccessMessage(null), 3000);
-  };
-
-  const loadData = useCallback(async () => {
-    try {
-      const inv = await getCurrentInventory();
-      setInventoryState({ is_running: inv.is_running, entries: inv.entries, sessionId: inv.session?.id || null });
-      if (!inv.is_running) setStockItems(await fetchCurrentStock());
-    } catch (e) { setError("Chyba komunikace."); }
-    setLoading(false);
-  }, []);
-  
-  // --- HANDLERS ---
-  const handleAddItem = async (name: string, unit: 'litry' | 'kusy', price: number, extra?: any) => {
-    try {
-      await addItem(name, unit, price, extra);
-      showSuccess("Položka přidána");
-      await loadData();
-    } catch (e) { setError("Chyba při přidávání položky."); }
-  };
-
-  const handleUpdateItem = async (
-    id: number,
-    name: string,
-    unit: 'litry' | 'kusy', 
-    price: number, 
-    stock: number,
-    extra?: any
-  ) => {
-    try {
-      await updateItem(id, name, unit, price, stock, extra); 
-      showSuccess("Položka aktualizována");
-      await loadData();
-    } catch (e) { setError("Chyba při aktualizaci."); }
-  };
-
-  const handleDeleteItem = async (item: Item) => {
-    if (!window.confirm(`Opravdu smazat ${item.name}?`)) return;
-    try {
-      await deleteItem(item.id);
-      showSuccess("Smazáno");
-      await loadData();
-    } catch (e) { setError("Chyba při mazání."); }
-  };
-
-  const handleBulkImport = async (data: any[]) => {
-    try {
-      await bulkImportItems(data);
-      showSuccess(`Importováno ${data.length} položek`);
-      await loadData();
-    } catch (e) { setError("Některé položky se nepodařilo importovat."); }
-  };
-
-  // --- EFFECTS ---
-  useEffect(() => {
-    loadData();
-    socket.on('entry_updated', (updated: InventoryEntry) => {
-      setInventoryState(prev => ({
-        ...prev,
-        entries: prev.entries.map(e => e.id === updated.id ? updated : e)
-      }));
-    });
-    socket.on('inventory_status_change', loadData);
-    return () => {
-      socket.off('entry_updated');
-      socket.off('inventory_status_change');
-    };
-  }, [loadData]);
-
-  if (loading) return (
-    <div className={styles.loaderWrapper}>
-      <div className={styles.loaderText}>BAR_CONTROL</div>
-    </div>
-  );
-
-  return (
-    <div className={styles.layout}>
-      <div className={styles.container}>
-        <button 
-          onClick={() => window.location.pathname = '/menu-admin'}
-          className={styles.settingsBtn}
-        >
-          ⚙️ Upravit Nápojový lístek
-        </button>
-        {/* Notifikace */}
-        {successMessage && <div className={styles.toast}>{successMessage}</div>}
-
-        <StatusHeader isRunning={inventoryState.is_running} />
-
-        {error && <div className={styles.error}>{error}</div>}
-
-        {!inventoryState.is_running ? (
-          <StockMode 
-            items={stockItems} 
-            onStartInventory={() => startInventory(CLIENT_ID).then(loadData)}
-            onAddItem={handleAddItem}
-            onDeleteItem={handleDeleteItem}
-            onUpdateItem={handleUpdateItem}
-            onRefresh={loadData}
-            onBulkImport={handleBulkImport}
-          />
-        ) : (
-          <InventoryMode 
-            entries={inventoryState.entries}
-            totalDiff={totalDiff}
-            onUpdate={(id, qty, weight) => updateInventoryEntry(id, qty, weight, CLIENT_ID)}
-            onFinish={() => inventoryState.sessionId && finishInventory(inventoryState.sessionId).then(loadData)}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
+  return <AppContent />;
+};
 
 export default App;

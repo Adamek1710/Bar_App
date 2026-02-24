@@ -44,10 +44,11 @@ interface Props {
   onUpdateItem: (id: number, name: string, unit: 'litry' | 'kusy', price: number, stock: number, extra?: any) => Promise<void>;
   onRefresh: () => void;
   onBulkImport: (data: any[]) => void;
+  showAdminFeatures?: boolean;
 }
 
 export const StockMode: React.FC<Props> = ({ 
-  items, onStartInventory, onAddItem, onDeleteItem, onUpdateItem, onRefresh,
+  items, onStartInventory, onAddItem, onDeleteItem, onUpdateItem, onRefresh, onBulkImport, showAdminFeatures = true
 }) => {
   const [activeTab, setActiveTab] = useState<'manual' | 'import' | 'export'>('manual');
   
@@ -116,54 +117,56 @@ export const StockMode: React.FC<Props> = ({
       </button>
 
       {/* --- ADDING --- */}
-      <div className="space-y-4">
-        <div className={styles.tabsWrapper}>
-          <button onClick={() => setActiveTab('manual')} className={styles.tabBtn(activeTab === 'manual')}>Ruční přidání</button>
-          <button onClick={() => setActiveTab('import')} className={styles.tabBtn(activeTab === 'import')}>Hromadný import</button>
-          <button onClick={() => setActiveTab('export')} className={styles.tabBtn(activeTab === 'export')}>Hromadný export</button>
-        </div>
-
-        {activeTab === 'manual' && (
-          <div className={`${styles.cardBase} ${styles.cardAdd}`}>
-            <div className={styles.formGrid}>
-              <div className="md:col-span-5 border-l-2 border-blue-500 pl-4">
-                <label className={styles.label}>Název produktu</label>
-                <input className={styles.input} placeholder="Např. Jameson 1L..." value={name} onChange={e => setName(e.target.value)} />
-              </div>
-              <div className="md:col-span-3">
-                <label className={styles.label}>Jednotka</label>
-                <select className={styles.input} value={unit} onChange={e => setUnit(e.target.value as any)}>
-                  <option value="litry">Litry (Alkohol)</option>
-                  <option value="kusy">Kusy (Ostatní)</option>
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className={styles.label}>Prodejní cena</label>
-                <input className={`${styles.input} text-emerald-500`} type="number" value={price || ''} onChange={e => setPrice(parseFloat(e.target.value) || 0)} />
-              </div>
-              <div className="md:col-span-2">
-                <button onClick={handleAddNew} className={styles.btnPrimary}>Přidat</button>
-              </div>
-            </div>
-
-            {unit === 'litry' && (
-              <div className={styles.extraGrid}>
-                <div className={styles.fieldWrapper}><label className={styles.label}>Plná láhev (g)</label><input type="number" className={styles.input} value={fullWeight || ''} onChange={e => setFullWeight(parseFloat(e.target.value) || 0)} /></div>
-                <div className={styles.fieldWrapper}><label className={styles.label}>Prázdná (g)</label><input type="number" className={styles.input} value={emptyWeight || ''} onChange={e => setEmptyWeight(parseFloat(e.target.value) || 0)} /></div>
-                <div className={styles.fieldWrapper}><label className={styles.label}>Váha panáka (g)</label><input type="number" className={styles.input} value={shotWeight || ''} onChange={e => setShotWeight(parseFloat(e.target.value) || 0)} /></div>
-                <div className={styles.fieldWrapper}><label className={styles.label}>Objem (L)</label><input type="number" step="0.01" className={styles.input} value={shotVolume || ''} onChange={e => setShotVolume(parseFloat(e.target.value) || 0)} /></div>
-              </div>
-            )}
+      {showAdminFeatures && (
+        <div className="space-y-4">
+          <div className={styles.tabsWrapper}>
+            <button onClick={() => setActiveTab('manual')} className={styles.tabBtn(activeTab === 'manual')}>Ruční přidání</button>
+            <button onClick={() => setActiveTab('import')} className={styles.tabBtn(activeTab === 'import')}>Hromadný import</button>
+            <button onClick={() => setActiveTab('export')} className={styles.tabBtn(activeTab === 'export')}>Hromadný export</button>
           </div>
-        )}
 
-        {activeTab === 'import' && (
-          <CSVImporter onImport={async () => { await onRefresh(); }} />
-        )}
-        {activeTab === 'export' && (
-          <ExcelExporter />
-        )}
-      </div>
+          {activeTab === 'manual' && (
+            <div className={`${styles.cardBase} ${styles.cardAdd}`}>
+              <div className={styles.formGrid}>
+                <div className="md:col-span-5 border-l-2 border-blue-500 pl-4">
+                  <label className={styles.label}>Název produktu</label>
+                  <input className={styles.input} placeholder="Např. Jameson 1L..." value={name} onChange={e => setName(e.target.value)} />
+                </div>
+                <div className="md:col-span-3">
+                  <label className={styles.label}>Jednotka</label>
+                  <select className={styles.input} value={unit} onChange={e => setUnit(e.target.value as any)}>
+                    <option value="litry">Litry (Alkohol)</option>
+                    <option value="kusy">Kusy (Ostatní)</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className={styles.label}>Prodejní cena</label>
+                  <input className={`${styles.input} text-emerald-500`} type="number" value={price || ''} onChange={e => setPrice(parseFloat(e.target.value) || 0)} />
+                </div>
+                <div className="md:col-span-2">
+                  <button onClick={handleAddNew} className={styles.btnPrimary}>Přidat</button>
+                </div>
+              </div>
+
+              {unit === 'litry' && (
+                <div className={styles.extraGrid}>
+                  <div className={styles.fieldWrapper}><label className={styles.label}>Plná láhev (g)</label><input type="number" className={styles.input} value={fullWeight || ''} onChange={e => setFullWeight(parseFloat(e.target.value) || 0)} /></div>
+                  <div className={styles.fieldWrapper}><label className={styles.label}>Prázdná (g)</label><input type="number" className={styles.input} value={emptyWeight || ''} onChange={e => setEmptyWeight(parseFloat(e.target.value) || 0)} /></div>
+                  <div className={styles.fieldWrapper}><label className={styles.label}>Váha panáka (g)</label><input type="number" className={styles.input} value={shotWeight || ''} onChange={e => setShotWeight(parseFloat(e.target.value) || 0)} /></div>
+                  <div className={styles.fieldWrapper}><label className={styles.label}>Objem (L)</label><input type="number" step="0.01" className={styles.input} value={shotVolume || ''} onChange={e => setShotVolume(parseFloat(e.target.value) || 0)} /></div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'import' && (
+            <CSVImporter onImport={async () => { await onRefresh(); }} />
+          )}
+          {activeTab === 'export' && (
+            <ExcelExporter />
+          )}
+        </div>
+      )}
 
       {/* --- LIST AND EDIT--- */}
       <div className="space-y-4">
@@ -214,7 +217,7 @@ export const StockMode: React.FC<Props> = ({
                 )}
               </div>
             ) : (
-              <StockCard key={item.id} item={item} onEdit={handleStartEdit} onDelete={onDeleteItem} />
+              <StockCard key={item.id} item={item} onEdit={handleStartEdit} onDelete={onDeleteItem} showAdminFeatures={showAdminFeatures} />
             )
           ))}
         </div>

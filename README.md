@@ -25,6 +25,15 @@ TBD
 2. **Install dependancies**
 TBD
 3. **Launch**
+python -m backend.run
+
+npm run dev
 TBD
+
+4. **Notes**
+Add notes for employee and for specific stock items
+
+KNOWNBUG:
+   
 
    

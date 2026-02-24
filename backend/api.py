@@ -1,7 +1,9 @@
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, jsonify, request, send_file, current_app
 import pandas as pd
 from .__init__ import db, socketio
-from .models import Item, LiquidItem, InventorySession, InventoryEntry, PublicMenuItem
+from functools import wraps
+from .models import User, AuthSession, Item, LiquidItem, InventorySession, InventoryEntry, PublicMenuItem
+from .auth_utils import authenticate_user, create_auth_session, get_user_from_token, invalidate_user_sessions
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 from io import BytesIO
@@ -9,12 +11,158 @@ import traceback
 
 api_bp = Blueprint('api', __name__)
 
+##############################
+#
+#    AUTHENTICATION ROUTES      
+#
+##############################
+
+def token_required(f):
+    """Decorator to require valid JWT token"""
+    from functools import wraps
+    import jwt
+    from datetime import datetime, timezone
+    
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        auth_header = request.headers.get('Authorization')
+        
+        if auth_header:
+            try:
+                token = auth_header.split(' ')[1]  # Bearer <token>
+            except IndexError:
+                return jsonify({'message': 'Invalid token format'}), 401
+        
+        if not token:
+            return jsonify({'message': 'Token is missing'}), 401
+        
+        try:
+            payload = jwt.decode(token, 'your-secret-key-change-in-production', algorithms=['HS256'])
+            user_id = payload['user_id']
+            from . import db
+            from .models import User
+            user = User.query.get(user_id)
+            if not user:
+                return jsonify({'message': 'User not found'}), 401
+            request.current_user = user
+            return f(*args, **kwargs)
+        except jwt.ExpiredSignatureError:
+            return jsonify({'message': 'Token has expired'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'message': 'Token is invalid'}), 401
+        
+    return decorated
+
+def role_required(required_role):
+    """Decorator to require specific role"""
+    def decorator(f):
+        from functools import wraps
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            if not hasattr(request, 'current_user'):
+                return jsonify({'message': 'Authentication required'}), 401
+            
+            if required_role == 'owner' and request.current_user.role != 'owner':
+                return jsonify({'message': 'Owner access required'}), 403
+            
+            return f(*args, **kwargs)
+        return decorated
+    return decorator
+
+@api_bp.route('/auth/login', methods=['POST'])
+def login():
+    """Login user and return JWT token"""
+    from . import db
+    
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    
+    if not username or not password:
+        return jsonify({'message': 'Username and password required'}), 400
+    
+    user = authenticate_user(username, password)
+    if not user:
+        return jsonify({'message': 'Invalid credentials'}), 401
+    
+    try:
+        # For now, return a simple token without session management
+        import jwt
+        from datetime import datetime, timezone, timedelta
+        
+        payload = {
+            'user_id': user.id,
+            'exp': datetime.now(timezone.utc) + timedelta(hours=24),
+            'iat': datetime.now(timezone.utc)
+        }
+        
+        token = jwt.encode(payload, 'your-secret-key-change-in-production', algorithm='HS256')
+        
+        return jsonify({
+            'token': token,
+            'user': user.to_dict(),
+            'expires_at': (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+        }), 200
+    except Exception as e:
+        current_app.logger.error(f"Login error: {e}")
+        return jsonify({'message': 'Login failed due to server error'}), 500
+
+@api_bp.route('/auth/logout', methods=['POST'])
+@token_required
+def logout():
+    """Logout user and invalidate token"""
+    invalidate_user_sessions(request.current_user.id)
+    return jsonify({'message': 'Logged out successfully'}), 200
+
+@api_bp.route('/auth/me', methods=['GET'])
+@token_required
+def get_current_user():
+    """Get current user info"""
+    return jsonify(request.current_user.to_dict()), 200
+
+@api_bp.route('/users', methods=['GET'])
+@token_required
+@role_required('owner')
+def get_users():
+    """Get all users (owner only)"""
+    users = User.query.all()
+    return jsonify([user.to_dict() for user in users]), 200
+
+@api_bp.route('/users', methods=['POST'])
+@token_required
+@role_required('owner')
+def create_user():
+    """Create new user (owner only)"""
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    role = data.get('role', 'employee')
+    
+    if not username or not password:
+        return jsonify({'message': 'Username and password required'}), 400
+    
+    if role not in ['owner', 'employee']:
+        return jsonify({'message': 'Invalid role'}), 400
+    
+    if User.query.filter_by(username=username).first():
+        return jsonify({'message': 'Username already exists'}), 409
+    
+    user = User(username=username, role=role)
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+    
+    return jsonify(user.to_dict()), 201
+
 @api_bp.route('/public-menu', methods=['GET'])
 def get_menu():
     items = PublicMenuItem.query.all()
     return jsonify([i.to_dict() for i in items])
 
 @api_bp.route('/public-menu', methods=['POST'])
+@token_required
+@role_required('owner')
 def add_menu_item():
     data = request.json
     new_item = PublicMenuItem(
@@ -28,6 +176,8 @@ def add_menu_item():
     return jsonify(new_item.to_dict()), 201
 
 @api_bp.route('/public-menu/<int:item_id>', methods=['DELETE'])
+@token_required
+@role_required('owner')
 def delete_menu_item(item_id):
     item = PublicMenuItem.query.get_or_404(item_id)
     db.session.delete(item)
@@ -41,6 +191,8 @@ def delete_menu_item(item_id):
 ##############################
 
 @api_bp.route('/items/<int:item_id>', methods=['DELETE'])
+@token_required
+@role_required('owner')
 def delete_item(item_id):
     item = Item.query.get(item_id)
     if not item:
@@ -52,10 +204,12 @@ def delete_item(item_id):
         return jsonify({'message': f'Položka {item.name} byla úspěšně smazána.'}), 200
     except Exception as e:
         db.session.rollback()
-        api_bp.logger.error(traceback.format_exc())
+        current_app.logger.error(traceback.format_exc())
         return "An internal error occured.", 500
 
 @api_bp.route('/items/<int:item_id>', methods=['PUT'])
+@token_required
+@role_required('owner')
 def update_item(item_id):
     item = db.session.get(Item, item_id)
     if not item:
@@ -79,10 +233,12 @@ def update_item(item_id):
         return jsonify(item.to_dict()), 200
     except Exception as e:
         db.session.rollback()
-        api_bp.logger.error(traceback.format_exc())
+        current_app.logger.error(traceback.format_exc())
         return "An internal error occured.", 500
 
 @api_bp.route('/items', methods=['POST'])
+@token_required
+@role_required('owner')
 def add_item():
     data = request.json
     try:
@@ -109,16 +265,18 @@ def add_item():
         return jsonify(new_item.to_dict()), 201
     except Exception as e:
         db.session.rollback()
-        api_bp.logger.error(traceback.format_exc())
+        current_app.logger.error(traceback.format_exc())
         return "An internal error occured.", 400
 
 
 @api_bp.route('/items', methods=['GET'])
+@token_required
 def get_all_items():
     items = Item.query.all()
     return jsonify([item.to_dict() for item in items]), 200
 
 @api_bp.route('/stock', methods=['GET'])
+@token_required
 def get_current_stock():
     items = Item.query.all()
     return jsonify({'stock': [item.to_dict() for item in items]}), 200
@@ -130,6 +288,7 @@ def get_current_stock():
 ##############################
 
 @api_bp.route('/inventory/start', methods=['POST'])
+@token_required
 def start_inventory():
     data = request.json
     client_id = data.get('client_id') 
@@ -171,6 +330,7 @@ def start_inventory():
     }), 201
 
 @api_bp.route('/inventory/finish/<int:session_id>', methods=['POST'])
+@token_required
 def finish_inventory(session_id):
     session = InventorySession.query.get_or_404(session_id)
     entries = InventoryEntry.query.filter_by(session_id=session_id).all()
@@ -198,6 +358,7 @@ def finish_inventory(session_id):
 
 # Zjistí aktuální stav session
 @api_bp.route('/inventory/current', methods=['GET'])
+@token_required
 def get_current_inventory():
     session = InventorySession.query.filter_by(status='DRAFT').first()
     
@@ -215,6 +376,8 @@ def get_current_inventory():
     })
 
 @api_bp.route('/inventory/upload', methods=['POST'])
+@token_required
+@role_required('owner')
 def upload_inventory():
     if 'file' not in request.files:
         return "No file", 400
@@ -240,7 +403,7 @@ def upload_inventory():
         return jsonify({"status": "success", "processed": items_processed}), 200
 
     except Exception as e:
-        api_bp.logger.error(traceback.format_exc())
+        current_app.logger.error(traceback.format_exc())
         return "Internal error with import", 500
 
 def upsert_item_in_db(name, stock, price):
@@ -254,6 +417,8 @@ def upsert_item_in_db(name, stock, price):
     db.session.commit()
 
 @api_bp.route('/inventory/export', methods=['GET'])
+@token_required
+@role_required('owner')
 def export_inventory():
     try:
         items = Item.query.all()
@@ -283,5 +448,5 @@ def export_inventory():
             download_name='sklad_export.xlsx'
         )
     except Exception as e:
-        api_bp.logger(traceback.format_exc())
+        current_app.logger(traceback.format_exc())
         return "An Internal error occured!", 500

@@ -19,10 +19,9 @@ def create_app(config_object=config.Config):
     socketio.init_app(app, cors_allowed_origins="*")
 
     from . import models 
-
     from .api import api_bp
-    app.register_blueprint(api_bp, url_prefix='/api')
-    
     from . import socket_events
+    
+    app.register_blueprint(api_bp, url_prefix='/api')
     
     return app
